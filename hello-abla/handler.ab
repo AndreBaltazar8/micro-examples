@@ -1,38 +1,16 @@
-import "abla/build"
-import "abla/unsafe/memory"
+import "abla/json"
+import "micro.ab"
 
-trusted fun allocate(length: int): int =
-    nativePointerAddress(ablaUnsafeAllocate(length))
-
-trusted fun handle(requestPointer: int, requestLength: int): int {
-    // Little-endian words for the 112-byte micro response envelope. Keeping
-    // the boundary byte-oriented avoids leaking Abla's managed string layout.
-    val output = ablaUnsafeAllocate(112)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 0), 8319683848551211643)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 8), 7503608514631318050)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 16), 4189037538572525925)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 24), 7310589519812778843)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 32), 2478510836879815790)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 40), 8083807916600336940)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 48), 7521891242266419564)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 56), 8391681050802352737)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 64), 2462445750852267366)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 72), 8314034549300686690)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 80), 5143429882511111781)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 88), 7951781583489495894)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 96), 7879401875695629898)
-    ablaUnsafeStoreI64(ablaUnsafePointerOffset(output, 104), 9016836737883924600)
-    val pointer = nativePointerAddress(output)
-    pointer * 4294967296 + 112 +
-        requestPointer * 0 + requestLength * 0
+// This is the complete application. The adapter owns WebAssembly memory and
+// wire encoding; handlers use normal typed Abla values.
+fun handle(request: MicroRequest): MicroResponse {
+    if (request.method != "GET") {
+        microTextResponse(405, "method not allowed\n")
+    } else if (request.path != "/") {
+        microTextResponse(404, "not found\n")
+    } else {
+        microJsonResponse(200, $json {
+            "message": "hello from Abla"
+        })
+    }
 }
-
-val allocatorExported = #exportFunction(
-    "allocate",
-    "micro_alloc"
-)
-
-val handlerExported = #exportFunction(
-    "handle",
-    "micro_handle"
-)

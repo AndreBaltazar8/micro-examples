@@ -1,0 +1,30 @@
+import "abla/json"
+
+class MicroRequest(
+    val method: string,
+    val path: string,
+    val query: string,
+    val body: string
+)
+
+class MicroHeader(val name: string, val value: string)
+
+class MicroResponse(
+    val status: int,
+    val headers: array<MicroHeader>,
+    val body: string
+)
+
+fun microTextResponse(status: int, body: string): MicroResponse =
+    MicroResponse(
+        status,
+        [MicroHeader("content-type", "text/plain; charset=utf-8")],
+        body
+    )
+
+fun microJsonResponse(status: int, body: Json): MicroResponse =
+    MicroResponse(
+        status,
+        [MicroHeader("content-type", "application/json; charset=utf-8")],
+        jsonStringify(body)
+    )

@@ -1,0 +1,86 @@
+import "abla/build"
+import "abla/crypto"
+import "abla/json"
+import "abla/unsafe/memory"
+import "handler.ab"
+import "micro.ab"
+
+// Low-level core-WASM adapter. Application code belongs in handler.ab.
+trusted fun allocateRequest(length: int): int {
+    var pointer = 0
+    if (length >= 0 && length <= 65536) {
+        val request = ablaUnsafeAllocate(length + 1)
+        ablaUnsafeStoreU8(ablaUnsafePointerOffset(request, length), 0)
+        pointer = nativePointerAddress(request)
+    }
+    pointer
+}
+
+trusted fun readRequest(pointer: int, length: int): string {
+    var request = ""
+    if (pointer > 0 && length >= 0 && length <= 65536) {
+        request = ablaUnsafeAdoptString(
+            nativePointerFromAddress(pointer),
+            length
+        )
+    }
+    request
+}
+
+trusted fun writeResponse(response: string): int {
+    val output = ablaUnsafeAllocate(response.size)
+    var index = 0
+    while (index < response.size) {
+        ablaUnsafeStoreU8(
+            ablaUnsafePointerOffset(output, index),
+            response[index]
+        )
+        index = index + 1
+    }
+    nativePointerAddress(output) * 4294967296 + response.size
+}
+
+fun decodeRequest(value: Json): MicroRequest = MicroRequest(
+    value.getString("method"),
+    value.getString("path"),
+    value.getString("query"),
+    base64Decode(value.getString("body_base64"))
+)
+
+fun encodeHeaders(headers: array<MicroHeader>): Json {
+    val encoded: array<Json> = []
+    var index = 0
+    while (index < headers.size) {
+        encoded.append(jsonArray([
+            jsonString(headers[index].name),
+            jsonString(headers[index].value)
+        ]))
+        index = index + 1
+    }
+    jsonArray(encoded)
+}
+
+fun encodeResponse(response: MicroResponse): string = jsonStringify(
+    jsonObject(
+        ["status", "headers", "body_base64"],
+        [jsonInteger(response.status), encodeHeaders(response.headers),
+         jsonString(base64Encode(response.body))]
+    )
+)
+
+trusted fun dispatch(pointer: int, length: int): int {
+    val parsed = jsonParse(readRequest(pointer, length))
+    val response = if (parsed.succeeded) handle(decodeRequest(parsed.value))
+        else microTextResponse(400, "invalid request\n")
+    writeResponse(encodeResponse(response))
+}
+
+val allocatorExported = #exportFunction(
+    "allocateRequest",
+    "micro_alloc"
+)
+
+val handlerExported = #exportFunction(
+    "dispatch",
+    "micro_handle"
+)

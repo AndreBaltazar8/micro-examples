@@ -2,7 +2,7 @@ import "abla/wasm/build"
 
 val built = #wasmBuildModule(
     "micro-example-hello-abla",
-    "hello-abla/handler.ab",
+    "hello-abla/guest.ab",
     "build/hello-abla.wasm",
     true,
     true
