@@ -1,0 +1,11 @@
+import "abla/wasm/build"
+
+val built = #wasmBuildModule(
+    "micro-example-hello-abla",
+    "hello-abla/handler.ab",
+    "build/hello-abla.wasm",
+    true,
+    true
+)
+
+fun main: int = if (built) 0 else 1
