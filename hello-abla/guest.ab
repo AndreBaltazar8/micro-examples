@@ -1,6 +1,8 @@
 import "abla/build"
+import "abla/bytes"
 import "abla/crypto"
 import "abla/json"
+import "abla/text"
 import "abla/unsafe/memory"
 import "handler.ab"
 import "micro.ab"
@@ -17,14 +19,18 @@ trusted fun allocateRequest(length: int): int {
 }
 
 trusted fun readRequest(pointer: int, length: int): string {
-    var request = ""
+    val request = byteBuffer()
     if (pointer > 0 && length >= 0 && length <= 65536) {
-        request = ablaUnsafeAdoptString(
-            nativePointerFromAddress(pointer),
-            length
-        )
+        val address = nativePointerFromAddress(pointer)
+        var index = 0
+        while (index < length) {
+            request.appendByteValue(ablaUnsafeLoadU8(
+                ablaUnsafePointerOffset(address, index)
+            ))
+            index = index + 1
+        }
     }
-    request
+    request.toText()
 }
 
 trusted fun writeResponse(response: string): int {
@@ -46,6 +52,18 @@ fun decodeRequest(value: Json): MicroRequest = MicroRequest(
     value.getString("query"),
     base64Decode(value.getString("body_base64"))
 )
+
+// MicroRequest does not expose headers yet. Normalize that nested wire field
+// before parsing so the typed request model only materializes supported data.
+fun requestWithoutHeaders(request: string): string {
+    val begin = textFindSequence(request, "\"headers\":")
+    val end = textFindSequence(request, ",\"body_base64\":", begin)
+    if (begin >= 0 && end > begin) {
+        val prefix = request.slice(0, begin)
+        val suffix = request.slice(end, request.size)
+        "$prefix\"headers\":[]$suffix"
+    } else request
+}
 
 fun encodeHeaders(headers: array<MicroHeader>): Json {
     val encoded: array<Json> = []
@@ -69,7 +87,7 @@ fun encodeResponse(response: MicroResponse): string = jsonStringify(
 )
 
 trusted fun dispatch(pointer: int, length: int): int {
-    val parsed = jsonParse(readRequest(pointer, length))
+    val parsed = jsonParse(requestWithoutHeaders(readRequest(pointer, length)))
     val response = if (parsed.succeeded) handle(decodeRequest(parsed.value))
         else microTextResponse(400, "invalid request\n")
     writeResponse(encodeResponse(response))
