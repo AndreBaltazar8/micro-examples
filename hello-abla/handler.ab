@@ -1,4 +1,3 @@
-import "abla/json"
 import "micro.ab"
 
 // This is the complete application. The adapter owns WebAssembly memory and
@@ -9,7 +8,9 @@ fun handle(request: MicroRequest): MicroResponse {
     } else if (request.path != "/") {
         microTextResponse(404, "not found\n")
     } else {
-        microJsonResponse(200, $json {
+        // The literal is validated and encoded while this function is built;
+        // an invocation only returns the frozen JSON text.
+        microJsonResponse(200, #$jsons {
             "message": "hello from Abla"
         })
     }

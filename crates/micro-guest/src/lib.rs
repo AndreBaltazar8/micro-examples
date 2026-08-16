@@ -3,22 +3,63 @@
 //! A guest exports exactly one handler with `export_micro!(handler)`. The
 //! runtime provides no imports, including WASI.
 
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub struct MicroRequest {
     pub method: String,
     pub path: String,
     pub query: String,
     pub headers: Vec<(String, String)>,
-    pub body_base64: String,
+    pub body: Vec<u8>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct MicroResponse {
     pub status: u16,
     pub headers: Vec<(String, String)>,
-    pub body_base64: String,
+    pub body: Vec<u8>,
+}
+
+impl MicroResponse {
+    pub fn text(status: u16, body: impl Into<String>) -> Self {
+        Self {
+            status,
+            headers: vec![("content-type".into(), "text/plain; charset=utf-8".into())],
+            body: body.into().into_bytes(),
+        }
+    }
+
+    pub fn json(status: u16, body: &impl Serialize) -> Self {
+        match serde_json::to_vec(body) {
+            Ok(body) => Self {
+                status,
+                headers: vec![(
+                    "content-type".into(),
+                    "application/json; charset=utf-8".into(),
+                )],
+                body,
+            },
+            Err(_) => Self::text(500, "could not encode response"),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct WireRequest {
+    method: String,
+    path: String,
+    query: String,
+    headers: Vec<(String, String)>,
+    body_base64: String,
+}
+
+#[derive(Serialize)]
+struct WireResponse {
+    status: u16,
+    headers: Vec<(String, String)>,
+    body_base64: String,
 }
 
 #[doc(hidden)]
@@ -29,12 +70,28 @@ pub fn decode_request(pointer: i32, length: i32) -> Result<MicroRequest, MicroRe
     // The host wrote exactly `length` initialized bytes after calling
     // `micro_alloc`; both values are checked above before this guest reads them.
     let bytes = unsafe { std::slice::from_raw_parts(pointer as *const u8, length as usize) };
-    serde_json::from_slice(bytes).map_err(|_| error_response("invalid request JSON"))
+    let wire: WireRequest =
+        serde_json::from_slice(bytes).map_err(|_| error_response("invalid request JSON"))?;
+    let body = base64::engine::general_purpose::STANDARD
+        .decode(wire.body_base64)
+        .map_err(|_| error_response("invalid request body"))?;
+    Ok(MicroRequest {
+        method: wire.method,
+        path: wire.path,
+        query: wire.query,
+        headers: wire.headers,
+        body,
+    })
 }
 
 #[doc(hidden)]
 pub fn encode_response(response: MicroResponse) -> i64 {
-    let mut encoded = serde_json::to_vec(&response)
+    let wire = WireResponse {
+        status: response.status,
+        headers: response.headers,
+        body_base64: base64::engine::general_purpose::STANDARD.encode(response.body),
+    };
+    let mut encoded = serde_json::to_vec(&wire)
         .unwrap_or_else(|_| br#"{"status":500,"headers":[],"body_base64":""}"#.to_vec());
     let pointer = encoded.as_mut_ptr() as usize as u32;
     let length = encoded.len() as u32;
@@ -43,14 +100,7 @@ pub fn encode_response(response: MicroResponse) -> i64 {
 }
 
 fn error_response(message: &str) -> MicroResponse {
-    MicroResponse {
-        status: 400,
-        headers: vec![("content-type".into(), "text/plain; charset=utf-8".into())],
-        body_base64: base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            message.as_bytes(),
-        ),
-    }
+    MicroResponse::text(400, message)
 }
 
 #[macro_export]

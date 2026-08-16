@@ -4,8 +4,8 @@ val built = #wasmBuildModule(
     "micro-example-hello-abla",
     "hello-abla/guest.ab",
     "build/hello-abla.wasm",
-    true,
-    true
+    false,
+    false
 )
 
 fun main: int = if (built) 0 else 1

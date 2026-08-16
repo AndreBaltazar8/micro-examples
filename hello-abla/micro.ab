@@ -1,19 +1,55 @@
 import "abla/json"
 
+class MicroHeader(val name: string, val value: string)
+
+class MicroHeaders(val encoded: string)
+
 class MicroRequest(
     val method: string,
     val path: string,
     val query: string,
+    val headers: MicroHeaders,
     val body: string
 )
-
-class MicroHeader(val name: string, val value: string)
 
 class MicroResponse(
     val status: int,
     val headers: array<MicroHeader>,
     val body: string
 )
+
+// Request headers stay encoded until application code asks for them. Most
+// functions never inspect headers, so they should not pay to materialize every
+// pair into dynamic JSON objects on each invocation.
+fun MicroHeaders.all(): array<MicroHeader> {
+    val headers: array<MicroHeader> = []
+    val parsed = jsonParse(this.encoded)
+    var index = 0
+    while (parsed.succeeded && parsed.value.isArray() &&
+        index < parsed.value.size()) {
+        val pair = parsed.value.at(index)
+        if (pair.isArray() && pair.size() == 2 &&
+            pair.at(0).isString() && pair.at(1).isString()) {
+            headers.append(MicroHeader(
+                pair.at(0).asString(),
+                pair.at(1).asString()
+            ))
+        }
+        index = index + 1
+    }
+    headers
+}
+
+fun MicroHeaders.get(name: string): string {
+    val headers = this.all()
+    var result = ""
+    var index = 0
+    while (index < headers.size) {
+        if (headers[index].name == name) result = headers[index].value
+        index = index + 1
+    }
+    result
+}
 
 fun microTextResponse(status: int, body: string): MicroResponse =
     MicroResponse(
@@ -22,9 +58,12 @@ fun microTextResponse(status: int, body: string): MicroResponse =
         body
     )
 
-fun microJsonResponse(status: int, body: Json): MicroResponse =
+// `$jsons` produces an already validated JSON string. Keeping the response
+// body textual means application handlers do not construct and stringify a
+// dynamic JSON tree for every request.
+fun microJsonResponse(status: int, body: string): MicroResponse =
     MicroResponse(
         status,
         [MicroHeader("content-type", "application/json; charset=utf-8")],
-        jsonStringify(body)
+        body
     )

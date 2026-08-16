@@ -10,5 +10,5 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-base64.workspace = true
 micro-guest = { path = "../crates/micro-guest" }
+serde_json.workspace = true

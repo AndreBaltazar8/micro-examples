@@ -14,7 +14,7 @@ micro deploy hello-rust build/hello-rust.wasm
 curl https://hello-rust.micro.do/
 ```
 
-The local `micro-guest` crate is intentionally tiny so the complete host/guest boundary can be read in one file.
+The local `micro-guest` crate is intentionally tiny so the complete host/guest boundary can be read in one file. It gives the handler an ordinary typed request with decoded body bytes and accepts a typed response; JSON, base64, allocation, and ABI exports stay inside the adapter.
 
 ## WAT hello
 
@@ -39,16 +39,13 @@ micro deploy hello-abla build/hello-abla.wasm
 curl https://hello-abla.micro.do/
 ```
 
-[`hello-abla/handler.ab`](hello-abla/handler.ab) is the complete application: one ordinary `handle(request: MicroRequest): MicroResponse` function using Abla's `$json` subparser. Text and JSON response helpers keep status, headers, and body typed; base64 appears only inside the wire adapter because the JSON envelope must carry arbitrary response bytes losslessly.
+[`hello-abla/handler.ab`](hello-abla/handler.ab) is the complete application: one ordinary `handle(request: MicroRequest): MicroResponse` function using Abla's `#$jsons` subparser. The JSON literal is validated and encoded at build time, while text and JSON response helpers keep status, headers, and body typed. Base64 appears only inside the wire adapter because the JSON envelope must carry arbitrary response bytes losslessly.
 
-[`hello-abla/micro.ab`](hello-abla/micro.ab) defines those application types. [`hello-abla/guest.ab`](hello-abla/guest.ab) is the reusable low-level adapter that parses the request, owns the pointer/linear-memory exchange, and exports the core-WASM ABI. The resulting module has no imports or WASI dependency.
-
-Abla currently exports foreign scalars as `i64`, so micro accepts the equivalent `micro_alloc(i64) -> i64` and `micro_handle(i64, i64) -> i64` form while retaining the same 32-bit memory offsets and packed response layout.
+[`hello-abla/micro.ab`](hello-abla/micro.ab) defines those application types. [`hello-abla/guest.ab`](hello-abla/guest.ab) is the reusable low-level adapter that parses the request, owns the pointer/linear-memory exchange, and exports the core-WASM ABI. It uses Abla's forward-only JSON reader and streaming encoder: fields are expressed by name, strings use the standard escaping rules, headers remain a validated lazy slice, and no dynamic JSON tree or handwritten wire punctuation is needed. The resulting module has no imports or WASI dependency.
 
 ## Runtime contract
 
 - exports: `memory`, `micro_alloc(i32) -> i32`, `micro_handle(i32, i32) -> i64`
-- Abla scalar form: `micro_alloc(i64) -> i64`, `micro_handle(i64, i64) -> i64`
 - request/response encoding: JSON in linear memory
 - result packing: response pointer in the high 32 bits, response length in the low 32 bits
 - imports: none, including no WASI or outbound network access
