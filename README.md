@@ -1,6 +1,6 @@
 # micro examples
 
-Small, auditable functions for [micro.do](https://micro.do). Each module implements the import-free `micro.wasm.v1` ABI and can be deployed with the public [`micro` CLI](https://github.com/AndreBaltazar8/micro-cli).
+Small, auditable functions for [micro.do](https://micro.do). Each module implements `micro.wasm.v1` and can be deployed with the public [`micro` CLI](https://github.com/AndreBaltazar8/micro-cli).
 
 ## Rust hello
 
@@ -41,7 +41,7 @@ curl https://hello-abla.micro.do/
 
 [`hello-abla/handler.ab`](hello-abla/handler.ab) is the complete application: one ordinary `handle(request: MicroRequest): MicroResponse` function using Abla's `#$jsons` subparser. The JSON literal is validated and encoded at build time, while text and JSON response helpers keep status, headers, and body typed. Base64 appears only inside the wire adapter because the JSON envelope must carry arbitrary response bytes losslessly.
 
-[`hello-abla/micro.ab`](hello-abla/micro.ab) defines those application types. [`hello-abla/guest.ab`](hello-abla/guest.ab) is the reusable low-level adapter that parses the request, owns the pointer/linear-memory exchange, and exports the core-WASM ABI. It uses Abla's forward-only JSON reader and streaming encoder: fields are expressed by name, strings use the standard escaping rules, headers remain a validated lazy slice, and no dynamic JSON tree or handwritten wire punctuation is needed. The resulting module has no imports or WASI dependency.
+[`hello-abla/micro.ab`](hello-abla/micro.ab) defines those application types and the sole allowlisted host capability. [`hello-abla/guest.ab`](hello-abla/guest.ab) is the reusable low-level adapter that parses the request, owns the pointer/linear-memory exchange, and exports the core-WASM ABI. It uses Abla's forward-only JSON reader and streaming encoder: fields are expressed by name, strings use the standard escaping rules, headers remain a validated lazy slice, and no dynamic JSON tree or handwritten wire punctuation is needed. The resulting module has no WASI dependency. It imports only `env::micro_platform_call(i64, i64, i64, i64) -> i64`, which accepts bounded JSON and receives runner-derived project, environment, and app-user scope.
 
 ### Measured guest profile
 
@@ -69,7 +69,7 @@ and their value/memory work, not from a larger static Abla program.
 - exports: `memory`, `micro_alloc(i32) -> i32`, `micro_handle(i32, i32) -> i64`
 - request/response encoding: JSON in linear memory
 - result packing: response pointer in the high 32 bits, response length in the low 32 bits
-- imports: none, including no WASI or outbound network access
+- imports: none, or the sole typed `env::micro_platform_call` host capability; never WASI or outbound network access
 
 ## License
 
