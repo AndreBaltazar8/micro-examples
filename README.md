@@ -1,6 +1,24 @@
-# micro examples
+# Micro examples
 
-Small, auditable functions for [micro.do](https://micro.do). Each module implements `micro.wasm.v1` and can be deployed with the public [`micro` CLI](https://github.com/AndreBaltazar8/micro-cli).
+Reviewed sites and small, auditable Wasm servers for [micro.do](https://micro.do). Build and deploy them with the public [`micro` CLI](https://github.com/AndreBaltazar8/micro-cli), directly or through the official [`micro-sites` skill](https://github.com/AndreBaltazar8/micro-mcp).
+
+## Digital-product storefront
+
+[`digital-product/`](digital-product/) is the product-level starting point. It
+is a complete responsive storefront using the injected browser SDK for app
+authentication, checkout, authoritative purchase state, and protected
+downloads. The stable product is declared in `micro.yaml`; the paid archive is
+never committed under `public/`.
+
+```sh
+cd digital-product
+micro build
+micro dev
+```
+
+Use this example when a harness is building a paid download or member library.
+Use the smaller examples below when inspecting a particular guest-language
+boundary.
 
 ## Rust hello
 
