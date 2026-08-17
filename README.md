@@ -59,7 +59,10 @@ its dynamic Wasmtime fuel remains 4.14× Rust's. The optimized Abla path reduced
 fuel by 33.8% from the 87,127-fuel all-Abla starting point. Stage profiling
 attributes 99.9% of the remaining fuel to request decoding, handler execution,
 and response encoding inside `micro_handle`, rather than instantiation or the
-guest allocator.
+guest allocator. Binaryen's static metrics count 27,709 operations across 25
+Abla functions versus 45,328 operations across 235 Rust functions. The
+opposite dynamic-fuel result therefore comes from the executed adapter paths
+and their value/memory work, not from a larger static Abla program.
 
 ## Runtime contract
 
