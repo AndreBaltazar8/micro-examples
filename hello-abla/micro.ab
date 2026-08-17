@@ -150,3 +150,13 @@ fun microDataPut(
     }
     return microPlatformCall(jsonObject(names, values))
 }
+
+fun microPurchases(): MicroPlatformResponse = microPlatformCall(jsonObject(
+    ["operation"], [jsonString("purchase.list")]
+))
+
+fun microHasEntitlement(entitlement: string): MicroPlatformResponse =
+    microPlatformCall(jsonObject(
+        ["operation", "entitlement"],
+        [jsonString("purchase.has_entitlement"), jsonString(entitlement)]
+    ))
