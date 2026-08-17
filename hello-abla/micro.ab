@@ -4,13 +4,30 @@ class MicroHeader(val name: string, val value: string)
 
 class MicroHeaders(val encoded: string)
 
+class MicroAppUser(
+    val authenticated: bool,
+    val id: string,
+    val email: string,
+    val displayName: string,
+    val emailVerified: bool
+)
+
+class MicroRequestContext(
+    val projectId: string,
+    val environment: string,
+    val user: MicroAppUser
+)
+
 class MicroRequest(
     val method: string,
     val path: string,
     val query: string,
     val headers: MicroHeaders,
-    val body: string
+    val body: string,
+    val context: MicroRequestContext
 )
+
+fun microAnonymousUser(): MicroAppUser = MicroAppUser(false, "", "", "", false)
 
 class MicroResponse(
     val status: int,

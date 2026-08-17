@@ -5,6 +5,14 @@ import "micro.ab"
 fun handle(request: MicroRequest): MicroResponse {
     if (request.method != "GET") {
         microTextResponse(405, "method not allowed\n")
+    } else if (request.path == "/whoami") {
+        microJsonResponse(200, jsonStringify(jsonObject(
+            ["authenticated", "id", "email", "email_verified"],
+            [jsonBoolean(request.context.user.authenticated),
+             jsonString(request.context.user.id),
+             jsonString(request.context.user.email),
+             jsonBoolean(request.context.user.emailVerified)]
+        )))
     } else if (request.path != "/") {
         microTextResponse(404, "not found\n")
     } else {

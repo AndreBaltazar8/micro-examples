@@ -49,16 +49,34 @@ fun decodeWireRequest(source: string): MicroWireRequest {
     val headers = reader.readStringPairsRaw()
     reader.nextExpectedRaw("body_base64")
     val body = reader.readString()
+    reader.nextExpectedRaw("context")
+    val contextSource = reader.readRaw()
     val succeeded = reader.finish()
+    val contextJson = jsonParse(contextSource)
+    val context = if (contextJson.succeeded && contextJson.value.isObject())
+        contextJson.value else jsonNull()
+    val userJson = context.get("user")
+    val user = if (userJson.isObject()) MicroAppUser(
+        true,
+        userJson.getString("id"),
+        userJson.getString("email"),
+        userJson.getString("display_name"),
+        userJson.get("email_verified").asBoolean()
+    ) else microAnonymousUser()
     MicroWireRequest(
         MicroRequest(
             method,
             path,
             query,
             MicroHeaders(headers),
-            if (succeeded) base64Decode(body) else ""
+            if (succeeded) base64Decode(body) else "",
+            MicroRequestContext(
+                context.getString("project_id"),
+                context.getString("environment"),
+                user
+            )
         ),
-        succeeded
+        succeeded && contextJson.succeeded && context.isObject()
     )
 }
 
