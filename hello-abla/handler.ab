@@ -3,7 +3,31 @@ import "micro.ab"
 // This is the complete application. The adapter owns WebAssembly memory and
 // wire encoding; handlers use normal typed Abla values.
 fun handle(request: MicroRequest): MicroResponse {
-    if (request.method != "GET") {
+    if (request.method == "POST" && request.path == "/remember") {
+        val value = jsonParse(request.body)
+        if (!request.context.user.authenticated) {
+            microJsonResponse(401, #$jsons {
+                "ok": false,
+                "error": "authentication_required"
+            })
+        } else if (!value.succeeded) {
+            microJsonResponse(400, #$jsons {
+                "ok": false,
+                "error": "invalid_json"
+            })
+        } else {
+            val stored = microDataPut(
+                "preferences",
+                "profile",
+                value.value,
+                "user"
+            )
+            microJsonResponse(if (stored.succeeded) 200 else 500, stored.body)
+        }
+    } else if (request.method == "GET" && request.path == "/remember") {
+        val stored = microDataGet("preferences", "profile", "user")
+        microJsonResponse(if (stored.succeeded) 200 else 500, stored.body)
+    } else if (request.method != "GET") {
         microTextResponse(405, "method not allowed\n")
     } else if (request.path == "/whoami") {
         microJsonResponse(200, jsonStringify(jsonObject(

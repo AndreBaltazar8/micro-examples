@@ -1,4 +1,12 @@
 import "abla/json"
+import "abla/unsafe/memory"
+
+trusted noescape extern:"c" fun micro_platform_call(
+    request: int,
+    requestLength: int,
+    response: int,
+    responseCapacity: int
+): int
 
 class MicroHeader(val name: string, val value: string)
 
@@ -32,6 +40,11 @@ fun microAnonymousUser(): MicroAppUser = MicroAppUser(false, "", "", "", false)
 class MicroResponse(
     val status: int,
     val headers: array<MicroHeader>,
+    val body: string
+)
+
+class MicroPlatformResponse(
+    val succeeded: bool,
     val body: string
 )
 
@@ -84,3 +97,56 @@ fun microJsonResponse(status: int, body: string): MicroResponse =
         [MicroHeader("content-type", "application/json; charset=utf-8")],
         body
     )
+
+// The only guest import is a bounded JSON operation. The runner derives the
+// project, environment, and current app user; application arguments can never
+// select another tenant.
+trusted fun microPlatformCall(request: Json): MicroPlatformResponse {
+    val encoded = jsonStringify(request)
+    val capacity = 65536
+    val output = __ablaRuntimeAllocate(capacity + 1)
+    val length = micro_platform_call(
+        nativeCStringAddress(encoded),
+        encoded.size,
+        output,
+        capacity
+    )
+    if (length >= 0 && length <= capacity) {
+        ablaRuntimeStoreU8(output + length, 0)
+        MicroPlatformResponse(true, adoptNativeString(output, length))
+    } else MicroPlatformResponse(
+        false,
+        "{\"ok\":false,\"error\":{\"code\":\"host_call_failed\",\"message\":\"platform call failed\"}}"
+    )
+}
+
+fun microDataGet(
+    collection: string,
+    key: string,
+    scope: string = "project"
+): MicroPlatformResponse = microPlatformCall(jsonObject(
+    ["operation", "collection", "key", "scope"],
+    [jsonString("data.get"), jsonString(collection), jsonString(key), jsonString(scope)]
+))
+
+fun microDataPut(
+    collection: string,
+    key: string,
+    value: Json,
+    scope: string = "project",
+    expectedVersion: int = -1
+): MicroPlatformResponse {
+    val names = ["operation", "collection", "key", "scope", "value"]
+    val values = [
+        jsonString("data.put"),
+        jsonString(collection),
+        jsonString(key),
+        jsonString(scope),
+        value
+    ]
+    if (expectedVersion >= 0) {
+        names.append("expected_version")
+        values.append(jsonInteger(expectedVersion))
+    }
+    return microPlatformCall(jsonObject(names, values))
+}
