@@ -29,6 +29,9 @@
       if (!currentUser) {
         ownsProduct = false;
         downloadButton.classList.add("hidden");
+        accountDownload.classList.add("hidden");
+        buyButton.textContent = "Get the collection — €19";
+        buyButton.disabled = false;
         return;
       }
       accountCopy.textContent = `${currentUser.email} · Purchases and downloads are verified by Micro.`;
