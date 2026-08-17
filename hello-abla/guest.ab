@@ -13,9 +13,8 @@ trusted fun allocateRequest(length: u32): u32 = allocateRequestValue(length)
 trusted fun allocateRequestValue(length: int): int {
     var pointer = 0
     if (length >= 0 && length <= 65536) {
-        val request = ablaUnsafeAllocate(length + 1)
-        ablaUnsafeStoreU8(ablaUnsafePointerOffset(request, length), 0)
-        pointer = nativePointerAddress(request)
+        pointer = __ablaRuntimeAllocate(length + 1)
+        ablaRuntimeStoreU8(pointer + length, 0)
     }
     pointer
 }

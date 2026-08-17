@@ -43,6 +43,24 @@ curl https://hello-abla.micro.do/
 
 [`hello-abla/micro.ab`](hello-abla/micro.ab) defines those application types. [`hello-abla/guest.ab`](hello-abla/guest.ab) is the reusable low-level adapter that parses the request, owns the pointer/linear-memory exchange, and exports the core-WASM ABI. It uses Abla's forward-only JSON reader and streaming encoder: fields are expressed by name, strings use the standard escaping rules, headers remain a validated lazy slice, and no dynamic JSON tree or handwritten wire punctuation is needed. The resulting module has no imports or WASI dependency.
 
+### Measured guest profile
+
+The final all-Abla runtime build was measured with Wasmtime fuel enabled on an
+empty-body `GET /` request. The Rust module uses the same request, response,
+runner, and `micro.wasm.v1` boundary.
+
+| Guest | Module | Allocate fuel | Handle fuel | Total fuel | Peak memory | Steady wall time |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Abla | 60,355 bytes | 68 | 57,590 | 57,658 | 1,114,112 bytes | 23–30 µs |
+| Rust | 156,354 bytes | 457 | 13,457 | 13,914 | 1,179,648 bytes | 26–33 µs |
+
+Abla's module is 61% smaller and its observed wall time is comparable, while
+its dynamic Wasmtime fuel remains 4.14× Rust's. The optimized Abla path reduced
+fuel by 33.8% from the 87,127-fuel all-Abla starting point. Stage profiling
+attributes 99.9% of the remaining fuel to request decoding, handler execution,
+and response encoding inside `micro_handle`, rather than instantiation or the
+guest allocator.
+
 ## Runtime contract
 
 - exports: `memory`, `micro_alloc(i32) -> i32`, `micro_handle(i32, i32) -> i64`
