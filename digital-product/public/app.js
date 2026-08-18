@@ -2,6 +2,7 @@
   const productId = "preset-pack";
   const fileId = "preset-files";
   const accountButton = document.querySelector("#account-button");
+  const microLoginButton = document.querySelector("#micro-login-button");
   const buyButton = document.querySelector("#buy-button");
   const downloadButton = document.querySelector("#download-button");
   const accountDownload = document.querySelector("#account-download");
@@ -26,6 +27,7 @@
       const current = await Micro.currentUser();
       currentUser = current.user || null;
       accountButton.textContent = currentUser ? "Your library" : "Sign in";
+      microLoginButton.classList.toggle("hidden", Boolean(currentUser));
       accountPanel.classList.toggle("hidden", !currentUser);
       if (!currentUser) {
         ownsProduct = false;
@@ -81,6 +83,7 @@
   }
 
   accountButton.addEventListener("click", openAccount);
+  microLoginButton.addEventListener("click", () => Micro.auth.loginWithMicro({returnTo: "/"}));
   buyButton.addEventListener("click", purchase);
   downloadButton.addEventListener("click", download);
   accountDownload.addEventListener("click", download);
