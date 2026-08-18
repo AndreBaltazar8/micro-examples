@@ -1,0 +1,53 @@
+import "micro.ab"
+
+fun microEventRecorded(purchaseId: string, event: Json): bool {
+    val inserted = microDataPut(
+        "purchase-events",
+        purchaseId,
+        event,
+        "project",
+        0
+    )
+    val insertBody = if (inserted.succeeded)
+        jsonParse(inserted.body) else jsonParse("")
+    if (insertBody.succeeded && insertBody.value.get("ok").asBoolean()) {
+        return true
+    }
+
+    // Deliveries are at least once. A create-only conflict means this stable
+    // purchase event was already applied, so a retry is successful without
+    // incrementing or replacing the record.
+    val existing = microDataGet("purchase-events", purchaseId)
+    val existingBody = if (existing.succeeded)
+        jsonParse(existing.body) else jsonParse("")
+    existingBody.succeeded && existingBody.value.get("ok").asBoolean()
+}
+
+fun handle(request: MicroRequest): MicroResponse {
+    if (request.method == "POST" &&
+        request.path == "/_micro/events/purchase.completed") {
+        val event = jsonParse(request.body)
+        val purchaseId = if (event.succeeded && event.value.isObject())
+            event.value.getString("purchase_id") else ""
+        val appUserId = if (event.succeeded && event.value.isObject())
+            event.value.getString("app_user_id") else ""
+        val productId = if (event.succeeded && event.value.isObject())
+            event.value.getString("product_id") else ""
+        val quantity = if (event.succeeded && event.value.isObject())
+            event.value.getInt("quantity") else 0
+        if (purchaseId == "" || appUserId == "" ||
+            productId != "preset-pack" || quantity < 1) {
+            return microJsonResponse(400, #$jsons {
+                "ok": false,
+                "error": "invalid_purchase_event"
+            })
+        }
+        return if (microEventRecorded(purchaseId, event.value))
+            MicroResponse(204, [], "")
+        else microJsonResponse(503, #$jsons {
+            "ok": false,
+            "error": "event_storage_failed"
+        })
+    }
+    microTextResponse(404, "not found\n")
+}

@@ -1,9 +1,11 @@
 # Stillroom digital product
 
-A reviewed static-shell Micro that uses the injected browser SDK for app
-accounts, authoritative purchase state, Stripe Checkout, and an
-entitlement-checked download. It intentionally contains no payment provider
-code and no protected file under `public/`.
+A reviewed static-shell Micro backed by a small Abla Wasm server. The browser
+uses the injected SDK for app accounts, authoritative purchase state, Stripe
+Checkout, and an entitlement-checked download. The server handles the trusted
+`purchase.completed` application event idempotently with a create-only project
+record. It intentionally contains no payment provider code or protected file
+under `public/`.
 
 ```sh
 micro build
