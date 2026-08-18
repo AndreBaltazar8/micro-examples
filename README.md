@@ -52,6 +52,11 @@ micro deploy hello-wat build/hello-wat.wasm
 curl https://hello-wat.micro.do/
 ```
 
+If WABT is installed outside `PATH`, set `WAT2WASM=/absolute/path/to/wat2wasm`.
+On systems where locally built Abla executables need an explicit OpenSSL
+runtime path, set `ABLA_TEST_LD_LIBRARY_PATH=/path/to/openssl/lib` when running
+the Make targets.
+
 The WAT version returns a fixed response and is useful for inspecting the ABI without a compiler toolchain.
 
 ## Abla hello
