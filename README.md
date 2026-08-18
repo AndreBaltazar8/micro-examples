@@ -1,6 +1,6 @@
 # Micro examples
 
-Reviewed sites and small, auditable Wasm servers for [micro.do](https://micro.do). Build and deploy them with the public [`micro` CLI](https://github.com/AndreBaltazar8/micro-cli), directly or through the official [`micro-sites` skill](https://github.com/AndreBaltazar8/micro-mcp).
+Reviewed sites and small, auditable Wasm servers for [micro.do](https://micro.do). Build and deploy them with the public [`micro` CLI](https://github.com/microdotdo/micro-cli), directly or through the official [`micro-sites` skill](https://github.com/microdotdo/micro-mcp).
 
 ## Digital-product storefront
 
