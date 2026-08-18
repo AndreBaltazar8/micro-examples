@@ -7,6 +7,12 @@ Checkout, and an entitlement-checked download. The server handles the trusted
 with create-only project records keyed by stable event identity. It intentionally
 contains no payment provider code or protected file under `public/`.
 
+Authenticated buyers can also ask the Wasm server to email a library reminder.
+The server verifies the entitlement, then calls `microEmailCurrentUser`. Micro
+chooses the verified session user's address and wraps the bounded plain text in
+its safe MJML template; site code cannot choose a recipient, sender, HTML, URL,
+attachment, or provider credential. Preview mail remains a local fixture.
+
 ```sh
 micro build
 micro dev

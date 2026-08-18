@@ -5,6 +5,7 @@
   const buyButton = document.querySelector("#buy-button");
   const downloadButton = document.querySelector("#download-button");
   const accountDownload = document.querySelector("#account-download");
+  const accountEmail = document.querySelector("#account-email");
   const signOutButton = document.querySelector("#sign-out-button");
   const accountPanel = document.querySelector("#account-panel");
   const accountCopy = document.querySelector("#account-copy");
@@ -30,6 +31,7 @@
         ownsProduct = false;
         downloadButton.classList.add("hidden");
         accountDownload.classList.add("hidden");
+        accountEmail.classList.add("hidden");
         buyButton.textContent = "Get the collection — €19";
         buyButton.disabled = false;
         return;
@@ -39,6 +41,7 @@
       ownsProduct = (ledger.purchases || []).some(purchaseIsActive);
       downloadButton.classList.toggle("hidden", !ownsProduct);
       accountDownload.classList.toggle("hidden", !ownsProduct);
+      accountEmail.classList.toggle("hidden", !ownsProduct);
       buyButton.textContent = ownsProduct ? "Purchased" : "Get the collection — €19";
       buyButton.disabled = ownsProduct;
       if (ownsProduct) setStatus("Quiet Light is in your library. Your download is ready.");
@@ -81,6 +84,25 @@
   buyButton.addEventListener("click", purchase);
   downloadButton.addEventListener("click", download);
   accountDownload.addEventListener("click", download);
+  accountEmail.addEventListener("click", async () => {
+    accountEmail.disabled = true;
+    setStatus("Queuing a reminder to your verified account…");
+    try {
+      const response = await fetch("/email-library", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {"content-type": "application/json"},
+        body: "{}"
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error?.message || result.error || "Email could not be queued.");
+      setStatus("Library reminder queued. Micro selected your verified account address.");
+    } catch (error) {
+      setStatus(error.message || "Email could not be queued.", true);
+    } finally {
+      accountEmail.disabled = false;
+    }
+  });
   signOutButton.addEventListener("click", async () => {
     await Micro.signOut();
     await refresh();

@@ -160,3 +160,13 @@ fun microHasEntitlement(entitlement: string): MicroPlatformResponse =
         ["operation", "entitlement"],
         [jsonString("purchase.has_entitlement"), jsonString(entitlement)]
     ))
+
+// Recipient authority never enters guest memory: the runner resolves the
+// authenticated, verified app user and applies per-user/project quotas.
+fun microEmailCurrentUser(
+    subject: string,
+    message: string
+): MicroPlatformResponse = microPlatformCall(jsonObject(
+    ["operation", "subject", "message"],
+    [jsonString("email.send_to_current_user"), jsonString(subject), jsonString(message)]
+))

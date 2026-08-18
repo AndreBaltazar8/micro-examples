@@ -24,6 +24,38 @@ fun microEventRecorded(collection: string, eventId: string, event: Json): bool {
 }
 
 fun handle(request: MicroRequest): MicroResponse {
+    if (request.method == "POST" && request.path == "/email-library") {
+        if (!request.context.user.authenticated ||
+            !request.context.user.emailVerified) {
+            return microJsonResponse(401, #$jsons {
+                "ok": false,
+                "error": "verified_account_required"
+            })
+        }
+        val entitlement = microHasEntitlement("preset-files")
+        val entitlementBody = if (entitlement.succeeded)
+            jsonParse(entitlement.body) else jsonParse("")
+        if (!entitlementBody.succeeded ||
+            !entitlementBody.value.get("entitled").asBoolean()) {
+            return microJsonResponse(403, #$jsons {
+                "ok": false,
+                "error": "purchase_required"
+            })
+        }
+        val queued = microEmailCurrentUser(
+            "Your Quiet Light library",
+            "Your preset collection is ready. Sign in to Stillroom and use Download Quiet Light whenever you need a fresh copy."
+        )
+        val queuedBody = if (queued.succeeded)
+            jsonParse(queued.body) else jsonParse("")
+        return if (queuedBody.succeeded &&
+            queuedBody.value.get("ok").asBoolean())
+            microJsonResponse(202, queued.body)
+        else microJsonResponse(429, if (queued.succeeded) queued.body else #$jsons {
+            "ok": false,
+            "error": "email_queue_failed"
+        })
+    }
     if (request.method == "POST" &&
         request.path == "/_micro/events/purchase.completed") {
         val event = jsonParse(request.body)
