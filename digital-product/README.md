@@ -7,6 +7,12 @@ Checkout, and an entitlement-checked download. The server handles the trusted
 with create-only project records keyed by stable event identity. It intentionally
 contains no payment provider code or protected file under `public/`.
 
+`GET /library` is rendered by the project Wasm from an Abla `$html` tree. Micro
+supplies the authenticated app-user context, the server SDK escapes every text
+and interpolation node, and the runner injects the browser SDK into the HTML
+response. This demonstrates authenticated SSR without trusting browser claims
+or hand-building HTML strings.
+
 Authenticated buyers can also ask the Wasm server to email a library reminder.
 The server verifies the entitlement, then calls `microEmailCurrentUser`. Micro
 chooses the verified session user's address and wraps the bounded plain text in

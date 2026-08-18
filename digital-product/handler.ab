@@ -1,5 +1,14 @@
 import "micro.ab"
 
+fun libraryPage(request: MicroRequest): Html {
+    val user = request.context.user
+    if (user.authenticated) {
+        val identity = if (user.displayName != "") user.displayName else user.email
+        return $html <html><head><title>Stillroom library</title></head><body><main><p>STILLROOM · YOUR LIBRARY</p><h1>Welcome, {identity}.</h1><p>This page was rendered inside the project Wasm with the authenticated user context supplied by Micro.</p><p>Your account is {user.email}. Purchases and protected downloads remain authoritative server-side.</p><p>Return to the Stillroom home page to view purchases or download your files.</p></main></body></html>
+    }
+    $html <html><head><title>Stillroom library</title></head><body><main><p>STILLROOM · YOUR LIBRARY</p><h1>Sign in to open your library.</h1><p>This response was rendered by the project Wasm. Return to the Stillroom home page and use the account button to sign in.</p></main></body></html>
+}
+
 fun microEventRecorded(collection: string, eventId: string, event: Json): bool {
     val inserted = microDataPut(
         collection,
@@ -24,6 +33,9 @@ fun microEventRecorded(collection: string, eventId: string, event: Json): bool {
 }
 
 fun handle(request: MicroRequest): MicroResponse {
+    if (request.method == "GET" && request.path == "/library") {
+        return microHtmlResponse(200, libraryPage(request))
+    }
     if (request.method == "POST" && request.path == "/email-library") {
         if (!request.context.user.authenticated ||
             !request.context.user.emailVerified) {

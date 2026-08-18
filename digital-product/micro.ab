@@ -1,4 +1,5 @@
 import "abla/json"
+import "abla/html"
 import "abla/unsafe/memory"
 
 trusted noescape extern:"c" fun micro_platform_call(
@@ -96,6 +97,52 @@ fun microJsonResponse(status: int, body: string): MicroResponse =
         status,
         [MicroHeader("content-type", "application/json; charset=utf-8")],
         body
+    )
+
+// `$html` deliberately produces a small tree instead of a trusted string.
+// Rendering escapes both literal and interpolated text, while element names
+// come only from the compile-time parser. This keeps authenticated values out
+// of raw markup by construction.
+fun microEscapeHtml(value: string): string {
+    var output = ""
+    var index = 0
+    while (index < value.size) {
+        val byte = value[index]
+        if (byte == 38) output = "${output}&amp;"
+        else if (byte == 60) output = "${output}&lt;"
+        else if (byte == 62) output = "${output}&gt;"
+        else if (byte == 34) output = "${output}&quot;"
+        else if (byte == 39) output = "${output}&#39;"
+        else output = "$output${value.slice(index, index + 1)}"
+        index = index + 1
+    }
+    output
+}
+
+fun Html.microRender(): string {
+    var output = ""
+    if (this.kind == 2) output = microEscapeHtml(this.text)
+    if (this.kind == 1) {
+        output = "<${this.tag}>"
+        var index = 0
+        while (index < this.children.size) {
+            output = "$output${this.children[index].microRender()}"
+            index = index + 1
+        }
+        output = "$output</${this.tag}>"
+    }
+    output
+}
+
+fun microHtmlResponse(status: int, view: Html): MicroResponse =
+    MicroResponse(
+        status,
+        [
+            MicroHeader("content-type", "text/html; charset=utf-8"),
+            MicroHeader("cache-control", "no-store"),
+            MicroHeader("vary", "cookie")
+        ],
+        "<!doctype html>${view.microRender()}"
     )
 
 // The only guest import is a bounded JSON operation. The runner derives the

@@ -1,9 +1,9 @@
 ABLA_ROOT ?= ../ablac
 ABLA_COMPILER ?= $(ABLA_ROOT)/build/ablac
 
-.PHONY: build build-rust build-wat build-abla deploy-rust deploy-wat deploy-abla
+.PHONY: build build-rust build-wat build-abla build-digital-product test-digital-product deploy-rust deploy-wat deploy-abla
 
-build: build-rust build-wat build-abla
+build: build-rust build-wat build-abla build-digital-product
 
 build-rust:
 	cargo build --release --target wasm32-unknown-unknown -p micro-example-hello
@@ -16,6 +16,15 @@ build-wat:
 
 build-abla:
 	ABLA_SYSROOT=$(ABLA_ROOT) $(ABLA_COMPILER) build hello-abla/build.ab -o build/hello-abla-builder --no-cache
+
+build-digital-product: test-digital-product
+	mkdir -p build
+	ABLA_SYSROOT=$(ABLA_ROOT) $(ABLA_COMPILER) build digital-product-build.ab -o build/digital-product-builder --no-cache
+
+test-digital-product:
+	mkdir -p build
+	ABLA_SYSROOT=$(ABLA_ROOT) $(ABLA_COMPILER) build digital-product-html-test.ab -o build/digital-product-html-test --no-cache
+	build/digital-product-html-test
 
 deploy-rust: build-rust
 	micro deploy hello-rust build/hello-rust.wasm

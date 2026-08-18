@@ -1,0 +1,11 @@
+import "abla/wasm/build"
+
+val built = #wasmBuildModule(
+    "micro-example-digital-product",
+    "digital-product/app.ab",
+    "build/digital-product.wasm",
+    false,
+    true
+)
+
+fun main: int = if (built) 0 else 1

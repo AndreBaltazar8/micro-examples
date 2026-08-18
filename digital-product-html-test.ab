@@ -1,0 +1,46 @@
+import "digital-product/handler.ab"
+
+fun main: int {
+    val hostile = "<&>\"'"
+    val rendered = ($html <main><p>{hostile}</p></main>).microRender()
+    if (rendered != "<main><p>&lt;&amp;&gt;&quot;&#39;</p></main>") return 1
+
+    val response = microHtmlResponse(200, $html <html><head><title>Test</title></head><body><p>{hostile}</p></body></html>)
+    if (response.status != 200) return 2
+    if (response.headers.size != 3) return 3
+    if (response.headers[0].value != "text/html; charset=utf-8") return 4
+    if (response.headers[1].value != "no-store") return 5
+    if (response.headers[2].value != "cookie") return 6
+    if (response.body != "<!doctype html><html><head><title>Test</title></head><body><p>&lt;&amp;&gt;&quot;&#39;</p></body></html>") return 7
+
+    val authenticated = MicroRequest(
+        "GET",
+        "/library",
+        "",
+        MicroHeaders("[]"),
+        "",
+        MicroRequestContext(
+            "project",
+            "production",
+            MicroAppUser(true, "user", "owner@example.com", hostile, true)
+        )
+    )
+    if (libraryPage(authenticated).querySelector("h1").microRender() !=
+        "<h1>Welcome, &lt;&amp;&gt;&quot;&#39;.</h1>") return 8
+
+    val anonymous = MicroRequest(
+        "GET",
+        "/library",
+        "",
+        MicroHeaders("[]"),
+        "",
+        MicroRequestContext(
+            "project",
+            "production",
+            microAnonymousUser()
+        )
+    )
+    if (libraryPage(anonymous).querySelector("h1").microRender() !=
+        "<h1>Sign in to open your library.</h1>") return 9
+    0
+}
