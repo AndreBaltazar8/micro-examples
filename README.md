@@ -21,6 +21,13 @@ Use this example when a harness is building a paid download or member library.
 Use the smaller examples below when inspecting a particular guest-language
 boundary.
 
+The checked-in [`gallery.json`](digital-product/gallery.json) makes this the
+first reviewed gallery candidate. It contains public descriptive metadata only;
+after deploying the example as a public Micro, an operator records the exact
+repository commit or review ticket as the consent receipt and curates that
+immutable deployment through Micro's private gallery API. The candidate file
+does not publish the entry, create a project, or reserve a slug.
+
 ## Rust hello
 
 Install Rust 1.90 or newer and the WebAssembly target:
