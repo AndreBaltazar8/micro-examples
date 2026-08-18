@@ -7,8 +7,8 @@ Reviewed sites and small, auditable Wasm servers for [micro.do](https://micro.do
 [`digital-product/`](digital-product/) is the product-level starting point. It
 is a complete responsive storefront using the injected browser SDK for app
 authentication, checkout, authoritative purchase state, and protected
-downloads. Its small Abla Wasm server records the trusted
-`purchase.completed` event exactly once. The stable product is declared in
+downloads. Its small Abla Wasm server records trusted `purchase.completed` and
+`schedule.triggered` events exactly once. The stable product is declared in
 `micro.yaml`; the paid archive is never committed under `public/`.
 
 ```sh

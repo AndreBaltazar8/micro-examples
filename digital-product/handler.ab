@@ -1,9 +1,9 @@
 import "micro.ab"
 
-fun microEventRecorded(purchaseId: string, event: Json): bool {
+fun microEventRecorded(collection: string, eventId: string, event: Json): bool {
     val inserted = microDataPut(
-        "purchase-events",
-        purchaseId,
+        collection,
+        eventId,
         event,
         "project",
         0
@@ -15,9 +15,9 @@ fun microEventRecorded(purchaseId: string, event: Json): bool {
     }
 
     // Deliveries are at least once. A create-only conflict means this stable
-    // purchase event was already applied, so a retry is successful without
+    // event was already applied, so a retry is successful without
     // incrementing or replacing the record.
-    val existing = microDataGet("purchase-events", purchaseId)
+    val existing = microDataGet(collection, eventId)
     val existingBody = if (existing.succeeded)
         jsonParse(existing.body) else jsonParse("")
     existingBody.succeeded && existingBody.value.get("ok").asBoolean()
@@ -42,7 +42,31 @@ fun handle(request: MicroRequest): MicroResponse {
                 "error": "invalid_purchase_event"
             })
         }
-        return if (microEventRecorded(purchaseId, event.value))
+        return if (microEventRecorded("purchase-events", purchaseId, event.value))
+            MicroResponse(204, [], "")
+        else microJsonResponse(503, #$jsons {
+            "ok": false,
+            "error": "event_storage_failed"
+        })
+    }
+    if (request.method == "POST" &&
+        request.path == "/_micro/events/schedule.triggered") {
+        val event = jsonParse(request.body)
+        val eventId = request.headers.get("x-micro-event-id")
+        val schedule = if (event.succeeded && event.value.isObject())
+            event.value.getString("schedule") else ""
+        val scheduledAt = if (event.succeeded && event.value.isObject())
+            event.value.getString("scheduled_at") else ""
+        val payload = if (event.succeeded && event.value.isObject())
+            event.value.get("payload") else jsonNull()
+        if (eventId == "" || schedule != "catalog-refresh" ||
+            scheduledAt == "" || !payload.isObject()) {
+            return microJsonResponse(400, #$jsons {
+                "ok": false,
+                "error": "invalid_schedule_event"
+            })
+        }
+        return if (microEventRecorded("schedule-events", eventId, event.value))
             MicroResponse(204, [], "")
         else microJsonResponse(503, #$jsons {
             "ok": false,
