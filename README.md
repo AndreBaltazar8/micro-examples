@@ -35,12 +35,19 @@ Install Rust 1.90 or newer and the WebAssembly target:
 ```sh
 rustup target add wasm32-unknown-unknown
 make build-rust
+cd hello-rust
+micro build
 micro login
-micro deploy hello-rust build/hello-rust.wasm
+micro deploy hello-rust
 curl https://hello-rust.micro.do/
 ```
 
-The local `micro-guest` crate is intentionally tiny so the complete host/guest boundary can be read in one file. It gives the handler an ordinary typed request with decoded body bytes and accepts a typed response; JSON, base64, allocation, and ABI exports stay inside the adapter.
+The build writes the validated server handoff to
+`hello-rust/.micro/build/app.wasm`, the same location `micro build` accepts from
+any non-Abla toolchain. The local `micro-guest` crate is intentionally tiny so
+the complete host/guest boundary can be read in one file. It gives the handler
+an ordinary typed request with decoded body bytes and accepts a typed response;
+JSON, base64, allocation, and ABI exports stay inside the adapter.
 
 ## WAT hello
 
@@ -48,7 +55,9 @@ With WABT's `wat2wasm` installed:
 
 ```sh
 make build-wat
-micro deploy hello-wat build/hello-wat.wasm
+cd hello-wat
+micro build
+micro deploy hello-wat
 curl https://hello-wat.micro.do/
 ```
 
@@ -66,7 +75,9 @@ With an [`ablac`](https://github.com/AndreBaltazar8/ablac) checkout next to this
 ```sh
 make -C ../ablac ablac
 make build-abla
-micro deploy hello-abla build/hello-abla.wasm
+cd hello-abla
+micro build
+micro deploy hello-abla
 curl https://hello-abla.micro.do/
 ```
 

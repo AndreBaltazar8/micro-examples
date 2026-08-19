@@ -9,15 +9,19 @@ build: build-rust build-wat build-abla build-digital-product
 
 build-rust:
 	cargo build --release --target wasm32-unknown-unknown -p micro-example-hello
-	mkdir -p build
+	mkdir -p build hello-rust/.micro/build
 	cp target/wasm32-unknown-unknown/release/micro_example_hello.wasm build/hello-rust.wasm
+	cp build/hello-rust.wasm hello-rust/.micro/build/app.wasm
 
 build-wat:
-	mkdir -p build
+	mkdir -p build hello-wat/.micro/build
 	$(WAT2WASM) hello-wat/hello.wat -o build/hello-wat.wasm
+	cp build/hello-wat.wasm hello-wat/.micro/build/app.wasm
 
 build-abla:
 	ABLA_SYSROOT=$(ABLA_ROOT) $(ABLA_COMPILER) build hello-abla/build.ab -o build/hello-abla-builder --no-cache
+	mkdir -p hello-abla/.micro/build
+	cp build/hello-abla.wasm hello-abla/.micro/build/app.wasm
 
 build-digital-product: test-digital-product
 	mkdir -p build
@@ -29,10 +33,10 @@ test-digital-product:
 	$(RUN_TEST) build/digital-product-html-test
 
 deploy-rust: build-rust
-	micro deploy hello-rust build/hello-rust.wasm
+	cd hello-rust && micro build && micro deploy hello-rust
 
 deploy-wat: build-wat
-	micro deploy hello-wat build/hello-wat.wasm
+	cd hello-wat && micro build && micro deploy hello-wat
 
 deploy-abla: build-abla
-	micro deploy hello-abla build/hello-abla.wasm
+	cd hello-abla && micro build && micro deploy hello-abla
